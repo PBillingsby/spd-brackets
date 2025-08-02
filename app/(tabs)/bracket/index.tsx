@@ -5,7 +5,7 @@ import { getMatchesForRound, getRacerName } from '@/lib/db/races';
 import { supabase } from '@/lib/supabaseClient';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, ScrollView, Text, TouchableOpacity, View, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 type Match = {
@@ -29,12 +29,14 @@ export default function Bracket() {
   const [selectedRound, setSelectedRound] = useState<RoundKey>('round1');
   const [rounds, setRounds] = useState(initialRounds);
   const [isLoading, setIsLoading] = useState<boolean>();
-  const [modalVisible, setModalVisible] = useState<boolean>(true);
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [hasSubmittedPicks, setHasSubmittedPicks] = useState(false);
   const { selectedAccount } = useAuthorization();
   const scrollViewRef = useRef<ScrollView>(null);
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   const raceId = '366f9ebb-c1d4-48f1-9ae0-8fcf5768ee58'; // TODO: dynamic
 
@@ -149,7 +151,8 @@ export default function Bracket() {
       const unpicked = currentRoundMatches.some(match => !picks[match.id]);
   
       if (unpicked) {
-        alert('Please make a selection for every match in this round before submitting.');
+        setModalVisible(true)
+        setModalMessage('Please make all selections for every match in this round before submitting.');
         return;
       }
   
@@ -172,14 +175,16 @@ export default function Bracket() {
       });
   
       setHasSubmittedPicks(true);
-      alert('Picks submitted!');
+
+      setModalVisible(true);
+      setModalMessage('Bracket submitted!');
     } catch (err) {
       console.error(err);
-      alert('Submit failed. See console.');
+      setModalVisible(true);
+      setModalMessage('Submission failed. Try again');
     }
   };
-  
-  
+
   const handleRoundMap = (round: string): string => {
     const keyMapping: Record<string, string> = {
       round1: 'Round 1',
@@ -268,120 +273,159 @@ export default function Bracket() {
     );
   };
 
+  useEffect(() => {
+    if (modalVisible) {
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 250,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.8);
+      opacityAnim.setValue(0);
+    }
+  }, [modalVisible]);
+
   return (
     <TabPageLayout>
-      <ScrollView
-        ref={scrollViewRef}
-        style={{ backgroundColor: '#0E0E0E' }}
-        contentContainerStyle={{ padding: 16 }}
-        onScroll={(event) => {
-          setCurrentScrollY(event.nativeEvent.contentOffset.y);
-        }}
-        scrollEventThrottle={16}
-      >
-      {isLoading ? (
-        <View style={{ padding: 20, alignItems: 'center' }}>
-          <Text style={loadingTextStyle}>Loading...</Text>
-        </View>
-      ) : (
-        <>
-          {/* Round selector */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 }}>
-            {roundKeys.map(r => (
-              <TouchableOpacity key={r} onPress={() => setSelectedRound(r)}>
-                <Text style={[
-                  roundTextStyle,
-                  {
-                    color: selectedRound === r ? '#DAA520' : '#888',
-                    borderBottomWidth: selectedRound === r ? 2 : 0,
-                    borderBottomColor: '#DAA520',
-                  }
-                ]}>
-                  {handleRoundMap(r)}
-                  {'\n'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {rounds[selectedRound].map(renderMatch)}
-
-          {/* Submit button */}
-          {roundStatusMap[selectedRound] === 'active' && !hasSubmittedPicks && (
-            <TouchableOpacity
-              onPress={handleSubmit}
-              style={{
-                backgroundColor: '#DAA520',
-                borderRadius: 10,
-                padding: 12,
-                marginTop: 20,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={submitButtonTextStyle}>
-                Submit Picks
-              </Text>
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-      {modalVisible && (
-        <BlurView
-          intensity={50}
-          tint="dark"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 32,
+      <View style={{ flex: 1, position: 'relative' }}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={{ flex: 1, backgroundColor: '#0E0E0E' }}
+          contentContainerStyle={{ padding: 16 }}
+          onScroll={(event) => {
+            setCurrentScrollY(event.nativeEvent.contentOffset.y);
           }}
+          scrollEventThrottle={16}
         >
+          {isLoading ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={loadingTextStyle}>Loading...</Text>
+            </View>
+          ) : (
+            <>
+              {/* Round selector */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 }}>
+                {roundKeys.map(r => (
+                  <TouchableOpacity key={r} onPress={() => setSelectedRound(r)}>
+                    <Text style={[
+                      roundTextStyle,
+                      {
+                        color: selectedRound === r ? '#DAA520' : '#888',
+                        borderBottomWidth: selectedRound === r ? 2 : 0,
+                        borderBottomColor: '#DAA520',
+                      }
+                    ]}>
+                      {handleRoundMap(r)}
+                      {'\n'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+  
+              {rounds[selectedRound].map(renderMatch)}
+  
+              {/* Submit button */}
+              {roundStatusMap[selectedRound] === 'active' && !hasSubmittedPicks && (
+                <TouchableOpacity
+                  onPress={handleSubmit}
+                  style={{
+                    backgroundColor: '#DAA520',
+                    borderRadius: 10,
+                    padding: 12,
+                    marginTop: 20,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={submitButtonTextStyle}>
+                    Submit Picks
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </ScrollView>
+  
+        {/* Modal overlay */}
+        {modalVisible && (
           <View
             style={{
-              backgroundColor: '#1e1e1e',
-              padding: 24,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: '#DAA520',
+              ...StyleSheet.absoluteFillObject,
+              justifyContent: 'center',
               alignItems: 'center',
-              width: '100%',
+              zIndex: 10,
             }}
           >
-            <Text
-              style={{
-                color: '#DAA520',
-                fontSize: 18,
-                fontFamily: 'Semplicita-Bold',
-                marginBottom: 12,
-                textAlign: 'center',
-              }}
-            >
-              {modalMessage}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={{
-                backgroundColor: '#DAA520',
-                paddingVertical: 10,
-                paddingHorizontal: 24,
-                borderRadius: 10,
-              }}
-            >
-              <Text style={{ fontFamily: 'Semplicita', color: '#0E0E0E', fontSize: 16 }}>
-                OK
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </BlurView>
-      )}
+            <BlurView
+              intensity={50}
+              tint="dark"
+              style={StyleSheet.absoluteFillObject}
+            />
 
-      </ScrollView>
+            <Animated.View
+              style={{
+                backgroundColor: '#1e1e1e',
+                padding: 24,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#eee',
+                alignItems: 'center',
+                width: '100%',
+                maxWidth: 300,
+                transform: [{ scale: scaleAnim }],
+                opacity: opacityAnim,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#eee',
+                  fontSize: 18,
+                  fontFamily: 'Semplicita',
+                  marginBottom: 12,
+                  textAlign: 'center',
+                }}
+              >
+                {modalMessage || 'This is your modal message.'}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                  borderStyle: 'solid',
+                  borderColor: '#eee',
+                  borderWidth: 1,
+                  paddingVertical: 10,
+                  paddingHorizontal: 24,
+                  marginTop: 24,
+                  borderRadius: 10,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: 'Semplicita',
+                    color: '#eee',
+                    fontSize: 16,
+                  }}
+                >
+                  OK
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        )}
+      </View>
     </TabPageLayout>
   );
+  
 }
 
 // Styles with Semplicita fonts

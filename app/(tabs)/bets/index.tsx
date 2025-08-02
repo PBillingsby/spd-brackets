@@ -1,5 +1,6 @@
 import { AppPage } from '@/components/app-page';
 import { TabPageLayout } from '@/components/layouts/TabPageLayout';
+import { WinnerModal } from '@/components/shared/WinnerModal';
 import { useAuthorization } from '@/components/solana/use-authorization';
 import { getAllRaceSelectionsByWallet, getRacerNamesByIds } from '@/lib/db/race_selections';
 import { supabase } from '@/lib/supabaseClient';
@@ -9,6 +10,8 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function MyBets() {
   const [activeTab, setActiveTab] = useState<'myBets' | 'spsChips'>('myBets');
+  const [modalVisible, setModalVisible] = useState<boolean>(true);
+
   const [raceEntries, setRaceEntries] = useState<
     {
       raceId: string;
@@ -91,7 +94,7 @@ export default function MyBets() {
         <>
           <Text style={emptyStateTextStyle}>No picks submitted</Text>
           <TouchableOpacity style={betNowButtonStyle} onPress={() => router.replace('/bracket')}>
-            <Text style={betButtonTextStyle}>Bet Now</Text>
+            <Text style={betButtonTextStyle}>+ ADD BETS</Text>
           </TouchableOpacity>
         </>
       ) : (
@@ -130,6 +133,7 @@ export default function MyBets() {
   return (
     <TabPageLayout>
       <AppPage>
+        <WinnerModal visible={modalVisible} onClose={() => setModalVisible(false)} />
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={tabSelectorStyle}>
             <TouchableOpacity onPress={() => setActiveTab('myBets')}>
@@ -160,7 +164,7 @@ export default function MyBets() {
         </ScrollView>
 
         <TouchableOpacity style={betNowButtonStyle} onPress={() => router.replace('/bracket')}>
-          <Text style={betButtonTextStyle}>Bet Now</Text>
+          <Text style={betButtonTextStyle}>+ ADD BETS</Text>
         </TouchableOpacity>
       </AppPage>
     </TabPageLayout>
