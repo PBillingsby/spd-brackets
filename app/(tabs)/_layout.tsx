@@ -107,7 +107,6 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen name="account" options={{ tabBarItemStyle: { display: 'none' } }} />
     </Tabs>
   );
 }

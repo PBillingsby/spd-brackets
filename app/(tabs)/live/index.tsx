@@ -3,6 +3,7 @@ import { AppView } from '@/components/app-view';
 import { TabPageLayout } from '@/components/layouts/TabPageLayout';
 import ClipSection from '@/components/video/video';
 import { getRacerNamesByIds } from '@/lib/db/race_selections';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
@@ -80,14 +81,17 @@ export default function Live() {
                 )}
               </View>
 
-              <TouchableOpacity style={{
-                backgroundColor: '#DAA520',
-                marginTop: 12,
-                paddingVertical: 10,
-                paddingHorizontal: 24,
-                borderRadius: 8
-              }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#000', fontFamily: 'Semplicita' }}>Bet Now</Text>
+              <TouchableOpacity
+                onPress={() => router.replace('/bracket')}
+                style={{
+                  backgroundColor: '#DAA520',
+                  marginTop: 12,
+                  paddingVertical: 10,
+                  paddingHorizontal: 24,
+                  borderRadius: 8
+                }}
+              >
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#000', fontFamily: 'Semplicita' }}>BET NOW</Text>
               </TouchableOpacity>
             </AppView>
 
