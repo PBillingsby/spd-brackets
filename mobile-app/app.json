@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "march-madness-app",
+    "slug": "march-madness-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "templateexpobasic",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "fonts": ["./assets/fonts/semplicita-medium.otf"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.marchmadnessapp"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.example.marchmadnessapp"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "backgroundColor": "#000000",
+            "image": "./assets/images/splash-icon.png"
+          },
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-web-browser",
+      "expo-font",
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {}
+    }
+  }
+}
