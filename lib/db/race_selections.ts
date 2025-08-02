@@ -14,6 +14,9 @@ export async function submitRacePicks({
 }) {
   if (!walletAddress) return;
   const txId = await submitPayment(walletAddress);
+  if (!txId) {
+    throw new Error('Transaction failed: No txId returned from submitPayment');
+  }
   const user = await getUser(walletAddress)
   const { error } = await supabase
     .from('race_selections')
