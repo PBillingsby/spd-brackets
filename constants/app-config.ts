@@ -4,7 +4,7 @@ import { clusterApiUrl } from '@solana/web3.js'
 
 export class AppConfig {
   static name = 'march-madness-app'
-  static uri = 'https://example.com'
+  static uri = 'https://clashoftitanstournament.com'
   static clusters: Cluster[] = [
     {
       id: 'solana:devnet',

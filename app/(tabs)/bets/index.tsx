@@ -1,7 +1,10 @@
 import { AppPage } from '@/components/app-page';
+import { AppView } from '@/components/app-view';
 import { TabPageLayout } from '@/components/layouts/TabPageLayout';
 import { WinnerModal } from '@/components/shared/WinnerModal';
 import { useAuthorization } from '@/components/solana/use-authorization';
+import { useMobileWallet } from '@/components/solana/use-mobile-wallet';
+import { AppConfig } from '@/constants/app-config';
 import { getAllRaceSelectionsByWallet, getRacerNamesByIds } from '@/lib/db/race_selections';
 import { supabase } from '@/lib/supabaseClient';
 import { router } from 'expo-router';
@@ -10,28 +13,26 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function MyBets() {
   const [activeTab, setActiveTab] = useState<'myBets' | 'spsChips'>('myBets');
-  const [modalVisible, setModalVisible] = useState<boolean>(true);
-
-  const [raceEntries, setRaceEntries] = useState<
-    {
-      raceId: string;
-      raceName: string;
-      picks: {
-        name: string;
-        isWinner: boolean;
-        hasWinner: boolean;
-      }[];
-    }[]
-  >([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [raceEntries, setRaceEntries] = useState([]);
   const [expandedRaceIds, setExpandedRaceIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useMobileWallet();
+
   const { selectedAccount } = useAuthorization();
 
   useEffect(() => {
-    const loadAll = async () => {
-      try {
-        const selections = await getAllRaceSelectionsByWallet(selectedAccount?.publicKey ?? '');
+    const loadRaceEntries = async () => {
+      if (!selectedAccount?.publicKey) return;
+      
+      const selections = await getAllRaceSelectionsByWallet(selectedAccount.publicKey);
+      if (!selections.length) {
+        setRaceEntries([]);
+        return;
+      }
 
+      setLoading(true);
+      try {
         const raceIds = selections.map((s) => s.race_id);
         const matchIds = selections.flatMap((s) => Object.keys(s.selections));
         const racerIds = selections.flatMap((s) => Object.values(s.selections));
@@ -42,29 +43,27 @@ export default function MyBets() {
           getRacerNamesByIds(racerIds),
         ]);
 
-        const raceNameMap = racesData?.reduce((acc, r) => {
-          acc[r.id] = r.name;
+        const raceNameMap = (racesData ?? []).reduce((acc, race) => {
+          acc[race.id] = race.name;
           return acc;
-        }, {} as Record<string, string>) ?? {};
+        }, {});
 
-        const winnerMap = matchesData?.reduce((acc, m) => {
-          acc[m.id] = m.winner_id;
+        const winnerMap = (matchesData ?? []).reduce((acc, match) => {
+          acc[match.id] = match.winner_id;
           return acc;
-        }, {} as Record<string, string>) ?? {};
+        }, {});
 
-        const entries = selections.map((s) => ({
-          raceId: s.race_id,
-          raceName: raceNameMap[s.race_id] || 'Unknown Race',
-          picks: Object.entries(s.selections)
+        const entries = selections.map((selection) => ({
+          raceId: selection.race_id,
+          raceName: raceNameMap[selection.race_id] || 'Unknown Race',
+          picks: Object.entries(selection.selections)
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([matchId, racerId]) => {
               const winnerId = winnerMap[matchId];
               return {
                 ...racerNamesMap[racerId],
-                isWinner: !!winnerId && winnerId === racerId,
-                didLose: !!winnerId && winnerId !== racerId,
+                isWinner: winnerId === racerId,
                 hasWinner: !!winnerId,
-
               };
             }),
         }));
@@ -77,7 +76,7 @@ export default function MyBets() {
       }
     };
 
-    if (selectedAccount?.publicKey) loadAll();
+    loadRaceEntries();
   }, [selectedAccount]);
 
   const renderEmptyCard = () => (
@@ -88,16 +87,25 @@ export default function MyBets() {
 
   const renderMyBetsCard = () => (
     <View style={{ marginBottom: 40 }}>
-      {loading ? (
-        <Text style={loadingTextStyle}>Loading...</Text>
-      ) : raceEntries.length === 0 ? (
-        <>
-          <Text style={emptyStateTextStyle}>No picks submitted</Text>
-          <TouchableOpacity style={betNowButtonStyle} onPress={() => router.replace('/bracket')}>
-            <Text style={betButtonTextStyle}>+ ADD BETS</Text>
-          </TouchableOpacity>
-        </>
+      {!selectedAccount ? (
+        <AppView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={emptyStateTextStyle}>Please sign in to view your entries.</Text>
+        <TouchableOpacity
+              onPress={() => signIn({ uri: AppConfig.uri })}
+              style={{
+                backgroundColor: '#DAA520',
+                paddingVertical: 10,
+                paddingHorizontal: 24,
+                borderRadius: 8
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 16, fontFamily: 'Semplicita' }}>Sign In</Text>
+            </TouchableOpacity>
+        </AppView>
+      ) : loading ? (
+        <Text style={emptyStateTextStyle}>Loading...</Text>
       ) : (
+        raceEntries.length > 0 ?
         raceEntries.map((race) => {
           const isExpanded = expandedRaceIds.includes(race.raceId);
           return (
@@ -115,17 +123,21 @@ export default function MyBets() {
                 <Text style={raceNameTextStyle}>{race.raceName}</Text>
                 <Text style={expandIconTextStyle}>{isExpanded ? '▲' : '▼'}</Text>
               </TouchableOpacity>
-
               {isExpanded &&
                 race.picks.map((pick, idx) => (
                   <Text key={idx} style={pickItemTextStyle}>
-                    {idx + 1}. {pick.name}{' '}
-                    {pick.hasWinner ? (pick.isWinner ? '🥇' : '🥈') : ''}
+                    {idx + 1}. {pick.name} {pick.hasWinner ? (pick.isWinner ? '🥇' : '🥈') : ''}
                   </Text>
                 ))}
             </View>
           );
-        })
+        }) :
+        <AppView style={{alignContent: 'center'}}>
+        <Text style={emptyStateTextStyle}>0 Selections Made.</Text>
+        <TouchableOpacity style={betNowButtonStyle} onPress={() => router.replace('/bracket')}>
+          <Text style={betButtonTextStyle}>+ ADD BETS</Text>
+        </TouchableOpacity>
+        </AppView>
       )}
     </View>
   );
@@ -163,9 +175,9 @@ export default function MyBets() {
           </View>
         </ScrollView>
 
-        <TouchableOpacity style={betNowButtonStyle} onPress={() => router.replace('/bracket')}>
+        {raceEntries.length > 0 && <TouchableOpacity style={betNowButtonStyle} onPress={() => router.replace('/bracket')}>
           <Text style={betButtonTextStyle}>+ ADD BETS</Text>
-        </TouchableOpacity>
+        </TouchableOpacity>}
       </AppPage>
     </TabPageLayout>
   );
@@ -211,7 +223,7 @@ const betNowButtonStyle = {
   paddingVertical: 10,
   paddingHorizontal: 16,
   borderRadius: 8,
-  alignSelf: 'flex-end',
+  alignSelf: 'center',
   marginTop: 12,
 };
 
@@ -225,7 +237,7 @@ const emptyStateTextStyle = {
   textAlign: 'center' as const,
   fontFamily: 'Semplicita',
   fontSize: 18,
-  padding: 100,
+  padding: 20,
 };
 
 const betButtonTextStyle = {

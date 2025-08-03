@@ -42,7 +42,7 @@ export async function submitPayment(
     const signedTx = await transact(async (wallet) => {
       // Authorize the wallet session
       await wallet.authorize({
-        identity: { name: 'March Madness App', uri: 'https://example.com' },
+        identity: { name: 'March Madness App', uri: 'https://clashoftitanstournament.com' },
         chain: 'solana:devnet',
       });
 

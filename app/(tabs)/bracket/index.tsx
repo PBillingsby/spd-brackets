@@ -1,5 +1,8 @@
+import SignIn from '@/app/sign-in';
 import { TabPageLayout } from '@/components/layouts/TabPageLayout';
 import { useAuthorization } from '@/components/solana/use-authorization';
+import { useMobileWallet } from '@/components/solana/use-mobile-wallet';
+import { AppConfig } from '@/constants/app-config';
 import { submitRacePicks } from '@/lib/db/race_selections';
 import { getMatchesForRound, getRacerName } from '@/lib/db/races';
 import { supabase } from '@/lib/supabaseClient';
@@ -32,7 +35,8 @@ export default function Bracket() {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const [picks, setPicks] = useState<Record<string, string>>({});
-  const [hasSubmittedPicks, setHasSubmittedPicks] = useState(false);
+  const [hasSubmittedPicks, setHasSubmittedPicks] = useState<boolean>(false);
+  const { signIn } = useMobileWallet();
   const { selectedAccount } = useAuthorization();
   const scrollViewRef = useRef<ScrollView>(null);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -166,6 +170,10 @@ export default function Bracket() {
           .single();
         if (!data) throw new Error(`Missing racer "${name}"`);
         racerIdMap[matchId] = data.id;
+      }
+
+      if (!selectedAccount) {
+        signIn({uri: AppConfig.uri})
       }
   
       await submitRacePicks({
